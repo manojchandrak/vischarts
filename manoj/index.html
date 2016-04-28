@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Simple click event</title>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta charset="utf-8">
+    <style>
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      #map {
+        height: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <script>
+ function initMap(){
+    var locations = [['Chesapeake Bay Bridge Tunnel ', 36.9736644, -76.1095002, 1],
+	['Kiptopeke', 37.1737755, -75.9748783, 2],
+	['Lewisetta', 37.9979068, -76.4627303, 3],
+	 [' Sewells Point', 36.9548696, -76.3268873, 5],
+	    ['Wachapreague', 37.6042998,  -75.6896502, 4],
+	
+	[' Gloucester Point', 37.254033, -76.496895, 7],
+	[' Colonial Beach', 38.2545737, -76.963583, 6]
+     
+   
+      
+      
+      
+    ];
+	var contentarray=['<div id="content" style="width:900px; height:900px">'+
+'<iframe src="../infovis/chesapeake.html" width="900" height ="800" style="overflow:hidden; overflow-y: hidden;" scrolling="no" seamless="seamless" ></iframe>'+
+      '</div>','<div id="content1" style="width:900px; height:900px">'+
+'<iframe src="../infovis/kiptopeke.html" width="900" height ="800" style="overflow:hidden; overflow-y: hidden;" scrolling="no" seamless="seamless"></iframe>'+
+      '</div>','<div id="content2" style="width:900px; height:900px">'+
+'<iframe src="../infovis/lewisette.html" width="900" height ="800" style="overflow:hidden; overflow-y: hidden;" scrolling="no" seamless="seamless" ></iframe>'+
+      '</div>','<div id="content3" style="width:900px; height:900px">'+
+'<iframe src="../infovis/sewellsPoint.html" width="900" height ="800" style="overflow:hidden; overflow-y: hidden;" scrolling="no" seamless="seamless" ></iframe>'+
+      '</div>','<div id="content4" style="width:900px; height:900px">'+
+'<iframe src="../infovis/wachapreague.html"width="900" height ="800" style="overflow:hidden; overflow-y: hidden;" scrolling="no" seamless="seamless" ></iframe>'+
+      '</div>','<div id="content5" style="width:800px; height:600px">'+
+'<iframe src="../last2/gloucesterPoint.html" width="800" height ="600" style="overflow:hidden; overflow-y: hidden;" scrolling="no" seamless="seamless" ></iframe>'+
+      '</div>',
+	  '<div id="content6" style="width:800px; height:600px">'+
+'<iframe src="../last2/colonialBeach.html" width="900" height ="600" style="overflow:hidden; overflow-y: hidden;" scrolling="no" seamless="seamless" ></iframe>'+
+      '</div>'
+	
+	
+	
+	];
+
+    var map = new google.maps.Map(document.getElementById('map'), {
+      zoom: 10,
+      center: new google.maps.LatLng(37.76487, -76.41948),
+      mapTypeId: google.maps.MapTypeId.ROADMAP
+    });
+
+	  //var contentString = '<div id="content" style="width:500px; height:900px">'+
+//'<iframe src="../meysamwork/chesaline.html" width="490" height ="800" ></iframe>'+
+      //'</div>';
+
+   var infowindow = new google.maps.InfoWindow({
+   // content: contentString
+	 
+  });
+
+    var marker, i;
+
+    for (i = 0; i < locations.length; i++) {  
+      marker = new google.maps.Marker({
+        position: new google.maps.LatLng(locations[i][1], locations[i][2]),
+        map: map
+      });
+
+      google.maps.event.addListener(marker, 'click', (function(marker, i) {
+        return function() {
+          infowindow.setContent(contentarray[i]); 
+          infowindow.open(map, marker);
+        }
+      })(marker, i));
+    }
+	}
+  </script>
+    </script>
+    <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDvOJylHDqfwpKWDNqKP6faRh2102BtXHc&callback=initMap">
+    </script>
+  </body>
+</html>

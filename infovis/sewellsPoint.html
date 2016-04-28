@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<style> /* set the CSS */
+
+body {
+  font: 10px sans-serif !important;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+.x.axis path {
+  display: none;
+}
+
+.line {
+  fill: none;
+  stroke: steelblue;
+  stroke-width: 1.5px;
+}
+
+.tooltip {
+  position: absolute;
+  width: 200px;
+  font-size: 10px;
+  //color:#333 ;
+  height: 22px;
+  pointer-events: none;
+}
+
+</style>
+<!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+
+<!-- Optional theme -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css" integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.3/jquery.js"></script>
+<!-- Latest compiled and minified JavaScript -->
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
+</head>
+<body>
+<div class="container">
+	<div class="center-block text-center" >
+		<div class="globalWarming"></div>
+		<div class="waterTemp"></div>
+		<div class="seaTrend"></div>
+	</div>
+</div>
+<!-- load the d3.js library -->    
+<script src="http://d3js.org/d3.v3.min.js"></script>
+
+<script>
+
+// Set the dimensions of the canvas / graph
+var margin = {top: 30, right: 20, bottom: 30, left: 50},
+    width = 600 - margin.left - margin.right,
+    height = 270 - margin.top - margin.bottom;
+
+// Parse the date / time
+var parseDate = d3.time.format("%Y").parse;
+    bisectDate = d3.bisector(function(d) { return d.date; }).left; // **
+
+// Set the ranges
+var x = d3.time.scale().range([0, width]);
+var y = d3.scale.linear().range([height, 0]);
+
+// Define the axes
+var xAxis = d3.svg.axis().scale(x)
+    .orient("bottom");
+
+var yAxis = d3.svg.axis().scale(y)
+    .orient("left");
+
+// Define the line
+var valueline = d3.svg.line()
+	//.interpolate("basis")
+    .x(function(d) { return x(d.date); })
+    .y(function(d) { return y(d.Temperature); });
+    
+// Adds the svg canvas for global warming
+var svg = d3.select(".globalWarming")
+    .append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+        .attr("transform", 
+              "translate(" + margin.left + "," + margin.top + ")");
+
+var lineSvg = svg.append("g");                             // **********
+
+var focus = svg.append("g")                                // **********
+    .style("display", "none");                             // **********
+	
+var tooltip = d3.select("body").append("div")
+    .attr("class", "tooltip")
+    .style("opacity", 0);
+
+// Get the data
+var data = [];
+d3.csv("global.csv", function(error, myData) {                 // **********
+    myData.forEach(function(d) {
+		d.date = parseDate(d.Year);
+        d.Temperature = +d.Temperature;
+		if(d.Year >= 1996 && d.Year <= 2015) {
+			data.push(d);
+		}
+    });
+
+    // Scale the range of the data
+    x.domain(d3.extent(data, function(d) { return d.date; }));
+    y.domain([
+
+    d3.min(data, function(c) { return c.Temperature }),
+
+    d3.max(data, function(c) { return c.Temperature })
+
+  ]);
+
+    // Add the valueline path.
+    lineSvg.append("path")                                 // **********
+        .attr("class", "line")
+        .attr("d", valueline(data));
+
+    // Add the X Axis
+    svg.append("g")
+        .attr("class", "x axis")
+        .attr("transform", "translate(0," + height + ")")
+        .call(xAxis)
+		.append("text")
+	    .attr("x", 550)
+        .attr("dy", ".71em")
+        .style("text-anchor", "end")
+        .text("Year");;
+
+    // Add the Y Axis
+    svg.append("g")
+        .attr("class", "y axis")
+        .call(yAxis)
+		.append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("y", 6)
+        .attr("dy", ".71em")
+        .style("text-anchor", "end")
+        .text("Air temperature");;
+
+    // append the circle at the intersection               // **********
+    focus.append("circle")                                 // **********
+        .attr("class", "y")                                // **********
+        .style("fill", "none")                             // **********
+        .style("stroke", "blue")                           // **********
+        .attr("r", 4);                                     // **********
+    
+    // append the rectangle to capture mouse               // **********
+    svg.append("rect")                                     // **********
+        .attr("width", width)                              // **********
+        .attr("height", height)                            // **********
+        .style("fill", "none")                             // **********
+        .style("pointer-events", "all")                    // **********
+        .on("mouseover", function() { 
+			focus.style("display", null); 
+		})
+        .on("mouseout", function() { 
+			focus.style("display", "none"); 
+			tooltip.transition()
+               .duration(500)
+               .style("opacity", 0);
+		})
+        .on("mousemove", mousemove);                       // **********
+
+    function mousemove() {                                 // **********
+        var x0 = x.invert(d3.mouse(this)[0]),              // **********
+            i = bisectDate(data, x0, 1),                   // **********
+            d0 = data[i - 1],                              // **********
+            d1 = data[i],                                  // **********
+            d = x0 - d0.date > d1.date - x0 ? d1 : d0;     // **********
+		tooltip.transition()
+               .duration(200)
+               .style("opacity", .9);
+			tooltip.html("Year: " + d.Year + "<br /> Global air temp: " + d.Temperature + "")
+               .style("left", (d3.event.pageX + (-10)) + "px")
+               .style("top", (d3.event.pageY - 28) + "px");
+        focus.select("circle.y")                           // **********
+            .attr("transform",                             // **********
+                  "translate(" + x(d.date) + "," +         // **********
+                                 y(d.Temperature) + ")");        // **********
+    }                                                      // **********
+
+});
+
+// Adds the svg2 canvas for water temperature
+var svg2 = d3.select(".waterTemp")
+    .append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+        .attr("transform", 
+              "translate(" + margin.left + "," + margin.top + ")");
+			  
+var lineSvg2 = svg2.append("g");                             // **********
+
+var focus2 = svg2.append("g")                                // **********
+    .style("display", "none"); 
+// Set the ranges
+var x2 = d3.time.scale().range([0, width]);
+var y2 = d3.scale.linear().range([height, 0]);	// **********
+
+// Define the axes
+var xAxis2 = d3.svg.axis().scale(x2)
+    .orient("bottom");
+
+var yAxis2 = d3.svg.axis().scale(y2)
+    .orient("left");
+
+// Define the line
+var valueline2 = d3.svg.line()
+	//.interpolate("basis")
+    .x(function(d) { return x2(d.date); })
+    .y(function(d) { return y2(d.Temperature); });
+// Get the data
+d3.csv("SewellsPointWithWaterTemp.csv", function(error, data) {                 // **********
+    data.forEach(function(d) {
+        d.date = parseDate(d.Year);
+        d.Temperature = +d.AvgWaterTemp;
+    });
+
+    // Scale the range of the data
+    x2.domain(d3.extent(data, function(d) { return d.date; }));
+    y2.domain([
+
+    d3.min(data, function(c) { return c.Temperature }),
+
+    d3.max(data, function(c) { return c.Temperature })
+
+  ]);
+
+    // Add the valueline path.
+    lineSvg2.append("path")                                 // **********
+        .attr("class", "line")
+        .attr("d", valueline2(data));
+
+    // Add the X Axis
+    svg2.append("g")
+        .attr("class", "x axis")
+        .attr("transform", "translate(0," + height + ")")
+        .call(xAxis2)
+		.append("text")
+	    .attr("x", 550)
+        .attr("dy", ".71em")
+        .style("text-anchor", "end")
+        .text("Year");;
+
+    // Add the Y Axis
+    svg2.append("g")
+        .attr("class", "y axis")
+        .call(yAxis2)
+		.append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("y", 6)
+        .attr("dy", ".71em")
+        .style("text-anchor", "end")
+        .text("Avg Water temperature");;
+
+    // append the circle at the intersection               // **********
+    focus2.append("circle")                                 // **********
+        .attr("class", "y")                                // **********
+        .style("fill", "none")                             // **********
+        .style("stroke", "blue")                           // **********
+        .attr("r", 4);                                     // **********
+    
+    // append the rectangle to capture mouse               // **********
+    svg2.append("rect")                                     // **********
+        .attr("width", width)                              // **********
+        .attr("height", height)                            // **********
+        .style("fill", "none")                             // **********
+        .style("pointer-events", "all")                    // **********
+        .on("mouseover", function() { 
+			focus2.style("display", null); 
+		})
+        .on("mouseout", function() { 
+			focus2.style("display", "none"); 
+			tooltip.transition()
+               .duration(500)
+               .style("opacity", 0);
+		})
+        .on("mousemove", mousemove);                       // **********
+
+    function mousemove() {                                 // **********
+        var x0 = x2.invert(d3.mouse(this)[0]),              // **********
+            i = bisectDate(data, x0, 1),                   // **********
+            d0 = data[i - 1],                              // **********
+            d1 = data[i],                                  // **********
+            d = x0 - d0.date > d1.date - x0 ? d1 : d0;     // **********
+		tooltip.transition()
+               .duration(200)
+               .style("opacity", .9);
+			tooltip.html("Year: " + d.Year + "<br /> Avg Water temp: " + d.Temperature + "")
+               .style("left", (d3.event.pageX + (-10)) + "px")
+               .style("top", (d3.event.pageY - 28) + "px");
+        focus2.select("circle.y")                           // **********
+            .attr("transform",                             // **********
+                  "translate(" + x2(d.date) + "," +         // **********
+                                 y2(d.Temperature) + ")");        // **********
+    }                                                      // **********
+
+});
+
+// Adds the svg3 canvas for sea trend
+var svg3 = d3.select(".seaTrend")
+    .append("svg")
+        .attr("width", width + margin.left + margin.right)
+        .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+        .attr("transform", 
+              "translate(" + margin.left + "," + margin.top + ")");
+			  
+var lineSvg3 = svg3.append("g");                             // **********
+
+var focus3 = svg3.append("g")                                // **********
+    .style("display", "none"); 
+// Set the ranges
+var x3 = d3.time.scale().range([0, width]);
+var y3 = d3.scale.linear().range([height, 0]);	// **********
+
+// Define the axes
+var xAxis3 = d3.svg.axis().scale(x3)
+    .orient("bottom");
+
+var yAxis3 = d3.svg.axis().scale(y3)
+    .orient("left");
+
+// Define the line
+var valueline3 = d3.svg.line()
+	//.interpolate("basis")
+    .x(function(d) { return x3(d.date); })
+    .y(function(d) { return y3(d.Temperature); });
+// Get the data
+d3.csv("SewellsPointWithWaterTemp.csv", function(error, data) {                 // **********
+    data.forEach(function(d) {
+        d.date = parseDate(d.Year);
+        d.Temperature = +d.AvgLinearTrend;
+    });
+
+    // Scale the range of the data
+    x3.domain(d3.extent(data, function(d) { return d.date; }));
+    y3.domain([
+
+    d3.min(data, function(c) { return c.Temperature }),
+
+    d3.max(data, function(c) { return c.Temperature })
+
+  ]);
+
+    // Add the valueline path.
+    lineSvg3.append("path")                                 // **********
+        .attr("class", "line")
+        .attr("d", valueline3(data));
+
+    // Add the X Axis
+    svg3.append("g")
+        .attr("class", "x axis")
+        .attr("transform", "translate(0," + height + ")")
+        .call(xAxis3)
+		.append("text")
+	    .attr("x", 550)
+        .attr("dy", ".71em")
+        .style("text-anchor", "end")
+        .text("Year");;
+
+    // Add the Y Axis
+    svg3.append("g")
+        .attr("class", "y axis")
+        .call(yAxis3)
+		.append("text")
+        .attr("transform", "rotate(-90)")
+        .attr("y", 6)
+        .attr("dy", ".71em")
+        .style("text-anchor", "end")
+        .text("Avg Sea Level Rise");;
+
+    // append the circle at the intersection               // **********
+    focus3.append("circle")                                 // **********
+        .attr("class", "y")                                // **********
+        .style("fill", "none")                             // **********
+        .style("stroke", "blue")                           // **********
+        .attr("r", 4);                                     // **********
+    
+    // append the rectangle to capture mouse               // **********
+    svg3.append("rect")                                     // **********
+        .attr("width", width)                              // **********
+        .attr("height", height)                            // **********
+        .style("fill", "none")                             // **********
+        .style("pointer-events", "all")                    // **********
+        .on("mouseover", function() { 
+			focus3.style("display", null); 
+		})
+        .on("mouseout", function() { 
+			focus3.style("display", "none"); 
+			tooltip.transition()
+               .duration(500)
+               .style("opacity", 0);
+		})
+        .on("mousemove", mousemove);                       // **********
+
+    function mousemove() {                                 // **********
+        var x0 = x3.invert(d3.mouse(this)[0]),              // **********
+            i = bisectDate(data, x0, 1),                   // **********
+            d0 = data[i - 1],                              // **********
+            d1 = data[i],                                  // **********
+            d = x0 - d0.date > d1.date - x0 ? d1 : d0;     // **********
+		tooltip.transition()
+               .duration(200)
+               .style("opacity", .9);
+			tooltip.html("Year: " + d.Year + "<br /> Avg Sea Level Rise: " + d.Temperature + "")
+               .style("left", (d3.event.pageX + (-10)) + "px")
+               .style("top", (d3.event.pageY - 28) + "px");
+        focus3.select("circle.y")                           // **********
+            .attr("transform",                             // **********
+                  "translate(" + x3(d.date) + "," +         // **********
+                                 y3(d.Temperature) + ")");        // **********
+    }                                                      // **********
+
+});
+
+
+
+</script>
+</body>
